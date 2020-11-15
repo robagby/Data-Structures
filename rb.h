@@ -37,7 +37,12 @@ Remove
 
 template<typename T, typename Comp = std::less<T>>
 class rb {
-
+// Properties:
+// 1. Each node is either red or black.
+// 2. The root is black.
+// 3. All leaves (nullptr) are black.
+// 4. If a node is red, then both children are black.
+// 5. Every path from a node to a leaf has the same # of black nodes.
 private:
 
     Comp comp;
@@ -51,7 +56,7 @@ private:
         ~node() {}
     } *root;
   
-    node* rotate_left(node *x) {
+    void rotate_left(node *x) {
         node *y = x->right;
         if (y) {
             x->right = y->left;
@@ -76,10 +81,10 @@ private:
             y->left = x;
         }
         x->parent = y;
-        return x;
+        //return x;
     }
   
-    node* rotate_right(node *x) {
+    void rotate_right(node *x) {
         node *y = x->left;
         if (y) {
             x->left = y->right;
@@ -101,7 +106,7 @@ private:
             y->right = x;
         }
         x->parent = y;
-        return x;
+        //return x;
     }
   
     void replace(node *u, node *v) {
@@ -143,6 +148,144 @@ private:
         }
     }
 
+    void traverse(node *u, int i) {
+        if (u->left) {
+            traverse(u->left, i+1);
+        }
+        std::cout << u->key << " level " << i << std::endl;
+        if (u->right) {
+            traverse(u->right, i+1);
+        }
+    }
+
+    void rebalance_insert(node *u) {
+        // Need to check 4 cases to maintain properties.
+        if (u->parent) {
+            // Case 2: parent node is black.
+            if (!u->parent->color) {
+                // Tree is valid so do nothing.
+            }
+            // Parent has to be red after above statement.
+            else if (u->parent->parent) {
+                // Case 4: parent is a red, right child and uncle is black.
+                if (!u->parent->parent->left || !u->parent->parent->left->color) {
+                    // Grandparent must be black.
+                    u->parent->color         = false;
+                    u->parent->parent->color = true;
+
+                    // Check if u is on the 'inside' of the subtree.
+                    if (u == u->parent->left) {
+                        rotate_right(u->parent);
+                        rotate_left(u->parent);
+                    }
+                    else {
+                        rotate_left(u->parent->parent);
+                    }
+                }
+                // Case 4: parent is u red, left child and uncle is black.
+                else if (!u->parent->parent->right || !u->parent->parent->right->color) {
+                    // Grandparent must be black.
+                    u->parent->color         = false;
+                    u->parent->parent->color = true;
+
+                    // Check if u is on the 'inside' of the subtree.
+                    if (u == u->parent->right) {
+                        rotate_left(u);
+                        rotate_right(u->parent);
+                    }
+                    else {
+                        rotate_right(u->parent->parent);
+                    }
+                }
+                // Case 3: both parent node and uncle node are red.
+                else {
+                    // Paint parent node and uncle node black.
+                    u->parent->parent->left->color  = false;
+                    u->parent->parent->right->color = false;
+
+                    // Paint grandparent node red.
+                    u->parent->parent->color = true;
+                }
+            }
+        }
+        // Must be root if node does not have parent.
+        else {
+            // Case 1: node is red and is the root node.
+            if (u->color) {
+                // Change color to black.
+                u->color = false;
+            }
+            root = u;
+        }  
+    }
+
+    void rebalance_delete(node *u) {
+        if (!u) {
+            return;
+        }
+        // Case 1: u new root.
+        if (!u->parent) {
+            root     = u;
+            u->color = false;
+            return;
+        }
+     
+        node *sibling;
+        // Case 2: sibling is red.
+        if (u == u->parent->left) {
+
+            sibling = u->parent->right;
+            // Case 2: sibling is red.
+            if (sibling && sibling->color) {
+                sibling->color         = false;
+                sibling->parent->color = true;
+                rotate_left(sibling->parent);
+            }
+            // Case 5: sibling is black right child, sibling's left child is red and sibling's right child is black.
+            else if (!sibling->color && sibling->left && sibling->left->color \
+                                                && (!sibling->right || sibling->right->color)) {
+                sibling->left->color = false;
+                sibling->color       = true;
+                rotate_right(sibling);
+            }
+            // Case 6: sibling is black right child, sibling's right child is red.
+            else if (!sibling->color && sibling->right && sibling->right->color) {
+                // Parent and sibling swap colors so parent has to become black.
+                sibling->right->color  = !sibling->parent->color;
+                sibling->parent->color = false;
+                rotate_left(sibling->parent);
+            }
+        }
+        // Case 2 cont.
+        else if (u == u->parent->right) {
+
+            sibling = u->parent->left;
+            // Case 2: sibling is red.
+            if (sibling && sibling->color) {
+                sibling->color         = false;
+                sibling->parent->color = true;
+                rotate_right(sibling->parent);
+            }
+        }
+        // Case 3 and 4.
+        // Sibling and all sibling's children are black.
+        if (sibling && !sibling->color && (!sibling->left || !sibling->left->color) \
+                                        && (!sibling->right || !sibling->right->color)) {
+
+            // Case 3: parent is also black.
+            if (sibling->parent && sibling->parent->color) {
+                // Paint sibling red and rebalance the parent node.
+                sibling->color = true;
+            }
+            // Case 4: parent is red.
+            else if (sibling->parent && !sibling->parent->color) {
+                // Switch colors for both parent and sibling.
+                sibling->color         = true;
+                sibling->parent->color = false;
+            }
+        }   
+    }
+    
 public:
 
     rb() : root(nullptr), p_size(0) {}
@@ -178,60 +321,9 @@ public:
 
         p_size++;
 
-        node *a = z;
-        while (a->parent) {
-            a = a->parent;
-            // Need to check 4 cases to maintain properties.
-            if (a->parent) {
-                // Case 2: parent node is black.
-                if (!a->parent->color) {
-                    // Tree is valid so do nothing.
-                }
-                // Parent has to be red after above statement.
-                if (a->parent->parent) {
-                    // Case 4: parent is a red, right child and uncle is black.
-                    if (!a->parent->parent->left || !a->parent->parent->left->color) {
-                        // Check if a is on the 'inside' of the subtree.
-                        if (a == a->parent->left) {
-                            a = rotate_right(a->parent);
-                        }
-                        a = a->parent;
-                        a->color = false;
-                        a->parent->color = true;
-                        a = rotate_left(a->parent);
-                    }
-                    // Case 4: parent is a red, left child and uncle is black.
-                    else if (!a->parent->parent->right || !a->parent->parent->right->color) {
-                        // Check if a is on the 'inside' of the subtree.
-                        if (a == a->parent->right) {
-                            a = rotate_left(a->parent);
-                        }
-                        a = a->parent;
-                        a->color = false;
-                        a->parent->color = true;
-                        a = rotate_right(a->parent);
-                    }
-                    // Case 3: both parent node and uncle node are red.
-                    else {
-                        // Paint parent node and uncle node black.
-                        a->parent->parent->left->color  = false;
-                        a->parent->parent->right->color = false;
-
-                        // Paint grandparent node red.
-                        a->parent->parent->color = true;
-                    }
-                }
-            }
-            // Must be root if node does not have parent.
-            else {
-                // Case 1: node is red and is the root node.
-                if (a->color) {
-                    // Change color to black.
-                    a->color = false;
-                    // Double check that this node will be root.
-                    root = a;
-                }
-            }   
+        while (z->parent) {
+            rebalance_insert(z);
+            z = z->parent;
         }
     }
   
@@ -253,32 +345,54 @@ public:
         
     void remove(const T &key) {
         node *z = search(key);
+
+        while (z && z->key != key) {
+            if (comp(z->key, key)) {
+                z = z->right;
+            }
+            else {
+                z = z->left;
+            }
+        }
+
         if (!z) {
             return;
         }
+
+        node *y = nullptr;
         if (!z->left) {
-            replace(z, z->right);
+            y = z->right;
+            replace(z, y);
         }
         else if (!z->right) {
-            replace(z, z->left);
+            y = z->left;
+            replace(z, y);
         }
         else {
-            node *y = subtree_minimum(z->right);
+            y = subtree_minimum(z->right);
             if (y->parent != z) {
                 replace(y, y->right);
                 y->right         = z->right;
                 y->right->parent = y;
             }
+
             replace(z, y);
             y->left         = z->left;
             y->left->parent = y;
         }
+
         delete z;
         p_size--;
+
+        while (y) {
+            rebalance_delete(y);
+            y = y->parent;
+        }
     }
  
     void traverse(void) {
-        traverse(root); 
+        traverse(root, 0); 
+        traverse(root);
         std::cout << std::endl;
     }
 
@@ -299,4 +413,4 @@ public:
     }
 
 };
-#endif // SPLAY_TREE
+#endif

@@ -51,7 +51,7 @@ private:
         ~node() {}
     } *root;
 
-    node* rotate_left(node *x) {
+    void rotate_left(node *x) {
         node *y = x->right;
         if (y) {
             x->right = y->left;
@@ -80,11 +80,9 @@ private:
         // Make sure to update height of x (child of y) 1st (because height is a function of child height).
         x->height = get_height(x);
         y->height = get_height(y);
-
-        return x;
     }
 
-    node* rotate_right(node *x) {
+    void rotate_right(node *x) {
         // Assumes x & x->left are both left heavy.
         node *y = x->left;
         if (y) {
@@ -114,8 +112,6 @@ private:
         // Make sure to update height of x (child of y) 1st (because height is a function of child height).
         x->height = get_height(x);
         y->height = get_height(y);
-
-        return x;
     }
 
     void replace(node *u, node *v) {
@@ -157,6 +153,16 @@ private:
         }
     }
 
+    void traverse(node *u, int i) {
+        if (u->left) {
+            traverse(u->left, i+1);
+        }
+        std::cout << u->key << " level " << i << std::endl;
+        if (u->right) {
+            traverse(u->right, i+1);
+        }
+    }
+
     int get_height(node *u) {
         // Height is max length from leaf node to node u.
         if (u->left && u->right) {
@@ -186,40 +192,37 @@ private:
         return r-l;
     }
 
-    node* rebalance(node *a) {
+    void rebalance(node *u) {
         // Rebalancing with tree rotations.
         int balance;
         
-        a->height = get_height(a);
-        balance   = get_balance(a);
+        u->height = get_height(u);
+        balance   = get_balance(u);
 
         // Right heavy.
         if (balance == 2) {
             // Right subtree is right heavy.
-            if (a->right && get_balance(a->right) == 1) {
-                a = rotate_left(a);
+            if (u->right && get_balance(u->right) == 1) {
+                rotate_left(u);
             }
             // Right subtree is left heavy.
-            else if (a->right && a->right->left && get_balance(a->right) == -1) {
-                //rotate_right_left(a);
-                a->right = rotate_right(a->right);
-                a = rotate_left(a);
+            else if (u->right && u->right->left && get_balance(u->right) == -1) {
+                rotate_right(u->right);
+                rotate_left(u);
             }
         }
         // Left heavy.
         else if (balance == -2) {
             // Left subtree is left heavy.
-            if (a->left && get_balance(a->left) == -1) {
-                a = rotate_right(a);
+            if (u->left && get_balance(u->left) == -1) {
+                rotate_right(u);
             }
             // Left subtree is right heavy.
-            else if (a->left && a->left->right && get_balance(a->left) == 1) {
-                //rotate_left_right(a);
-                a->left = rotate_left(a->left);
-                a = rotate_right(a);
+            else if (u->left && u->left->right && get_balance(u->left) == 1) {
+                rotate_left(u->left);
+                rotate_right(u);
             }
         }
-        return a;
     }
 
 public:
@@ -258,7 +261,7 @@ public:
         node *a = z;
         while (a->parent) {
             a = a->parent;
-            a = rebalance(a);
+            rebalance(a);
         }
     }
 
@@ -302,7 +305,6 @@ public:
             replace(z, z->left);
         }
         else {
-            
             node *y = subtree_minimum(z->right);
             if (y->parent != z) {
                 replace(y, y->right);
@@ -317,13 +319,14 @@ public:
         p_size--;
 
         while (p) {
-            p = rebalance(p);
+            rebalance(p);
             p = p->parent;
         }
     }
 
     void traverse(void) {
-        traverse(root); 
+        traverse(root, 0); 
+        traverse(root);
         std::cout << std::endl;
     }
 
