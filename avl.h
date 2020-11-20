@@ -30,7 +30,7 @@ Split
     to x and the other containing all elements greater than x.
 
 Search
-
+    Find node in tree.
 
 Insert
     Place node into tree.
