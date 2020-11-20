@@ -1,10 +1,14 @@
 #include <functional>
 #include <iostream>
 
-#ifndef AVL_TREE
-#define AVL_TREE
+#ifndef AVL_TREE_H
+#define AVL_TREE_H
 
 /*   
+
+AVL Tree
+
+
 TIME COMPLEXITY
 
             Average         Worst case
@@ -37,7 +41,6 @@ Remove
 
 template<typename T, typename Comp = std::less<T>>
 class avl {
-
 private:
 
     Comp comp;
@@ -111,6 +114,80 @@ private:
 
         // Make sure to update height of x (child of y) 1st (because height is a function of child height).
         x->height = get_height(x);
+        y->height = get_height(y);
+    }
+
+    void rotate_left_right(node *x) {
+        node *z = x->left;
+        node *y = z->right;
+
+        if (!x->parent) {
+            root = y;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = y;
+        }
+        // x is right child.
+        else {
+            x->parent->right = y;
+        }
+
+        x->left = y->right;
+        if (y->right) {
+            y->right->parent = x;
+        }
+        y->right = x;
+
+        z->right = y->left;
+        if (y->left) {
+            y->left->parent = z;
+        }
+        y->left   = z;
+
+        y->parent = x->parent;
+        x->parent = y;
+        z->parent = y;
+
+        x->height = get_height(x);
+        z->height = get_height(z);
+        y->height = get_height(y);
+    }
+
+    void rotate_right_left(node *x) {
+        node *z = x->right;
+        node *y = z->left;
+
+        if (!x->parent) {
+            root = y;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = y;
+        }
+        // x is right child.
+        else {
+            x->parent->right = y;
+        }
+
+        x->right = y->left;
+        if (y->left) {
+            y->left->parent = x;
+        }
+        y->left = x;
+
+        z->left = y->right;
+        if (y->right) {
+            y->right->parent = z;
+        }
+        y->right  = z;
+
+        y->parent = x->parent;
+        x->parent = y;
+        z->parent = y;
+
+        x->height = get_height(x);
+        z->height = get_height(z);
         y->height = get_height(y);
     }
 
@@ -207,8 +284,7 @@ private:
             }
             // Right subtree is left heavy.
             else if (u->right && u->right->left && get_balance(u->right) == -1) {
-                rotate_right(u->right);
-                rotate_left(u);
+                rotate_right_left(u->right->left);
             }
         }
         // Left heavy.
@@ -219,15 +295,14 @@ private:
             }
             // Left subtree is right heavy.
             else if (u->left && u->left->right && get_balance(u->left) == 1) {
-                rotate_left(u->left);
-                rotate_right(u);
+                rotate_left_right(u->left->right);
             }
         }
     }
 
 public:
 
-    avl() : root(nullptr), p_size(0) {}
+    avl() : p_size(0), root(nullptr) { }
 
     void insert(const T &key) {
         node *z = root;
@@ -294,6 +369,7 @@ public:
                 z = z->left;
             }
         }
+        
         if (!z) {
             return;
         }
