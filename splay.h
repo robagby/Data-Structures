@@ -49,18 +49,17 @@ Remove
 
 template<typename T, typename Comp = std::less<T>>
 class splay {
-
 private:
-
     Comp comp;
     unsigned long p_size;
 
     struct node {
-        node *left, *right;
-        node *parent;
         T key;
-        node(const T& init = T()) : left(nullptr), right(nullptr), parent(nullptr), key(init) {}
-        ~node() {}
+        node *left;
+        node *right;
+        node *parent;
+        node(const T& init = T()) : key(init), left(nullptr), right(nullptr), parent(nullptr) { }
+        ~node() { }
     } *root;
   
     void rotate_left(node *x) {
@@ -113,36 +112,168 @@ private:
         }
         x->parent = y;
     }
+
+    void rotate_left_right(node *x) {
+        node *z = x->left;
+        node *y = z->right;
+
+        if (!x->parent) {
+            root = y;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = y;
+        }
+        // x is right child.
+        else {
+            x->parent->right = y;
+        }
+
+        x->left = y->right;
+        if (y->right) {
+            y->right->parent = x;
+        }
+        y->right = x;
+
+        z->right = y->left;
+        if (y->left) {
+            y->left->parent = z;
+        }
+        y->left   = z;
+
+        y->parent = x->parent;
+        x->parent = y;
+        z->parent = y;
+    }
+
+    void rotate_right_left(node *x) {
+        node *z = x->right;
+        node *y = z->left;
+
+        if (!x->parent) {
+            root = y;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = y;
+        }
+        // x is right child.
+        else {
+            x->parent->right = y;
+        }
+
+        x->right = y->left;
+        if (y->left) {
+            y->left->parent = x;
+        }
+        y->left = x;
+
+        z->left = y->right;
+        if (y->right) {
+            y->right->parent = z;
+        }
+        y->right  = z;
+
+        y->parent = x->parent;
+        x->parent = y;
+        z->parent = y;
+    }
+
+    void rotate_left_left(node *x) {
+        node *y = x->right;
+        node *z = y->right;
+
+        if (!x->parent) {
+            root = z;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = z;
+        }
+        // x is right child.
+        else {
+            x->parent->right = z;
+        }
+
+        z->parent = x->parent;
+        x->parent = y;
+        y->parent = z;
+
+        x->right  = y->left;
+        if (y->left) {
+            y->left->parent = x;
+        }
+        y->left   = x;
+
+        y->right  = z->left;
+        if (z->left) {
+            z->left->parent = y;
+        }
+        z->left   = y;
+    }
+
+    void rotate_right_right(node *x) {
+        node *y = x->left;
+        node *z = y->left;
+
+        if (!x->parent) {
+            root = z;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = z;
+        }
+        // x is right child.
+        else {
+            x->parent->right = z;
+        }
+
+        z->parent = x->parent;
+        x->parent = y;
+        y->parent = z;
+
+        x->left   = y->right;
+        if (y->right) {
+            y->right->parent = x;
+        }
+        y->right  = x;
+
+        y->left   = z->right;
+        if (z->right) {
+            z->right->parent = y;
+        }
+        z->right  = y;
+    }
   
     void splay_node(node *x) {
         while (x->parent) {
             if (!x->parent->parent) {
+                // x is left child.
                 if (x->parent->left == x) {
                     rotate_right(x->parent);
                 }
+                // x is right child.
                 else {
                     rotate_left(x->parent);
                 }
+            } 
+            // Both x and parent are left children.
+            else if (x->parent->left  == x && x->parent->parent->left == x->parent) {
+                rotate_right_right(x->parent->parent);
 
             } 
-            else if (x->parent->left  == x && x->parent->parent->left  == x->parent) {
-                rotate_right(x->parent->parent);
-                rotate_right(x->parent);
-
-            } 
+            // Both x and parent are right children.
             else if (x->parent->right == x && x->parent->parent->right == x->parent) {
-                rotate_left(x->parent->parent);
-                rotate_left(x->parent);
+                rotate_left_left(x->parent->parent);
 
             } 
+            // x is left child and parent is right child.
             else if (x->parent->left  == x && x->parent->parent->right == x->parent) {
-                rotate_right(x->parent);
-                rotate_left(x->parent);
-
+                rotate_right_left(x->parent->parent);
             } 
+            // x is right child and parent is left child.
             else {
-                rotate_left(x->parent);
-                rotate_right(x->parent);
+                rotate_left_right(x->parent->parent);
             }
         }
     }
@@ -176,6 +307,16 @@ private:
         return u;
     }
 
+    void traverse(node *u, int i) {
+        if (u->left) {
+            traverse(u->left, i+1);
+        }
+        std::cout << u->key << " level " << i << std::endl;
+        if (u->right) {
+            traverse(u->right, i+1);
+        }
+    }
+
     void traverse(node *u) {
         if (u->left) {
             traverse(u->left);
@@ -187,8 +328,7 @@ private:
     }
 
 public:
-
-    splay() : root(nullptr), p_size(0) {}
+    splay() : p_size(0), root(nullptr) { }
   
     void insert(const T &key) {
         node *z = root;
@@ -239,10 +379,23 @@ public:
     }
         
     void remove(const T &key) {
-        node *z = search(key);
+        node *z = root;
+        node *p = nullptr;
+        
+        while (z && z->key != key) {
+            p = z;
+            if (comp(z->key, key)) {
+                z = z->right;
+            }
+            else {
+                z = z->left;
+            }
+        }
+
         if (!z) {
             return;
         }
+
         if (!z->left) {
             replace(z, z->right);
         }
@@ -262,20 +415,15 @@ public:
         }
         delete z;
         p_size--;
-    }
-/*
-    splay<T>* join(splay<T>* t) {
-        node *max  = subtree_maximum(root);
-        splay(max);
-        max->right = t.splay::root;
 
-        p_size    += t.size();
-
-        return ;
+        if (p) {
+            splay_node(p);
+        }
     }
-*/    
+  
     void traverse(void) {
-        traverse(root); 
+        traverse(root, 0); 
+        traverse(root);
         std::cout << std::endl;
     }
 
