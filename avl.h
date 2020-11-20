@@ -284,7 +284,7 @@ private:
             }
             // Right subtree is left heavy.
             else if (u->right && u->right->left && get_balance(u->right) == -1) {
-                rotate_right_left(u->right->left);
+                rotate_right_left(u);
             }
         }
         // Left heavy.
@@ -295,7 +295,7 @@ private:
             }
             // Left subtree is right heavy.
             else if (u->left && u->left->right && get_balance(u->left) == 1) {
-                rotate_left_right(u->left->right);
+                rotate_left_right(u);
             }
         }
     }
