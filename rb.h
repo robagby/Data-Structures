@@ -1,10 +1,22 @@
 #include <functional>
 #include <iostream>
 
-#ifndef RED_BLACK_TREE
-#define RED_BLACK_TREE
+#ifndef RED_BLACK_TREE_H
+#define RED_BLACK_TREE_H
 
 /*   
+
+Red-Black Tree
+
+Properties:
+
+1. Each node is either red or black.
+2. The root is black.
+3. All leaves (nullptr) are black.
+4. If a node is red, then both children are black.
+5. Every path from a node to a leaf has the same # of black nodes.
+
+
 TIME COMPLEXITY
 
             Average         Worst case
@@ -37,12 +49,6 @@ Remove
 
 template<typename T, typename Comp = std::less<T>>
 class rb {
-// Properties:
-// 1. Each node is either red or black.
-// 2. The root is black.
-// 3. All leaves (nullptr) are black.
-// 4. If a node is red, then both children are black.
-// 5. Every path from a node to a leaf has the same # of black nodes.
 private:
 
     Comp comp;
@@ -81,7 +87,6 @@ private:
             y->left = x;
         }
         x->parent = y;
-        //return x;
     }
   
     void rotate_right(node *x) {
@@ -106,7 +111,72 @@ private:
             y->right = x;
         }
         x->parent = y;
-        //return x;
+    }
+
+    void rotate_left_right(node *x) {
+        node *z = x->left;
+        node *y = z->right;
+
+        if (!x->parent) {
+            root = y;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = y;
+        }
+        // x is right child.
+        else {
+            x->parent->right = y;
+        }
+
+        x->left = y->right;
+        if (y->right) {
+            y->right->parent = x;
+        }
+        y->right = x;
+
+        z->right = y->left;
+        if (y->left) {
+            y->left->parent = z;
+        }
+        y->left   = z;
+
+        y->parent = x->parent;
+        x->parent = y;
+        z->parent = y;
+    }
+
+    void rotate_right_left(node *x) {
+        node *z = x->right;
+        node *y = z->left;
+
+        if (!x->parent) {
+            root = y;
+        }
+        // x is left child.
+        else if (x == x->parent->left) {
+            x->parent->left  = y;
+        }
+        // x is right child.
+        else {
+            x->parent->right = y;
+        }
+
+        x->right = y->left;
+        if (y->left) {
+            y->left->parent = x;
+        }
+        y->left = x;
+
+        z->left = y->right;
+        if (y->right) {
+            y->right->parent = z;
+        }
+        y->right  = z;
+
+        y->parent = x->parent;
+        x->parent = y;
+        z->parent = y;
     }
   
     void replace(node *u, node *v) {
@@ -175,8 +245,7 @@ private:
 
                     // Check if u is on the 'inside' of the subtree.
                     if (u == u->parent->left) {
-                        rotate_right(u->parent);
-                        rotate_left(u->parent);
+                        rotate_right_left(u->parent->parent);
                     }
                     else {
                         rotate_left(u->parent->parent);
@@ -190,8 +259,7 @@ private:
 
                     // Check if u is on the 'inside' of the subtree.
                     if (u == u->parent->right) {
-                        rotate_left(u);
-                        rotate_right(u->parent);
+                        rotate_left_right(u->parent->parent);
                     }
                     else {
                         rotate_right(u->parent->parent);
@@ -288,7 +356,7 @@ private:
     
 public:
 
-    rb() : root(nullptr), p_size(0) {}
+    rb() : p_size(0), root(nullptr) { }
   
     void insert(const T &key) {
         node *z = root;
@@ -413,4 +481,4 @@ public:
     }
 
 };
-#endif
+#endif 
