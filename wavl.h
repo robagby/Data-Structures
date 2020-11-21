@@ -445,12 +445,10 @@ public:
         else {
             p->left = z;
         }
-        p_size++;
 
-        node *a = z;
-        while (a) {
+        p_size++;
+        for (node *a = z ; a ; a = a->parent) {
             rebalance_insert(a);
-            a = a->parent;
         }
     }
 
@@ -506,10 +504,8 @@ public:
         }
         delete z;
         p_size--;
-
-        while (p) {
-            rebalance_delete(p);
-            p = p->parent;
+        for (node *a = p ; a ; a = a->parent) {
+            rebalance_delete(a);
         }
     }
 
