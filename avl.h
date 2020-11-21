@@ -332,10 +332,7 @@ public:
             p->left = z;
         }
         p_size++;
-
-        node *a = z;
-        while (a->parent) {
-            a = a->parent;
+        for (node *a = z->parent ; a ; a = a->parent) {
             rebalance(a);
         }
     }
@@ -393,10 +390,8 @@ public:
         }
         delete z;
         p_size--;
-
-        while (p) {
-            rebalance(p);
-            p = p->parent;
+        for (node *a = p ; a ; a = a->parent) {
+            rebalance(a);
         }
     }
 
