@@ -137,7 +137,7 @@ private:
 
         z->right = y->left;
         if (y->left) {
-            y->left->parent = z;
+            y->left->parent  = z;
         }
         y->left   = z;
 
@@ -388,10 +388,8 @@ public:
         }
 
         p_size++;
-
-        while (z->parent) {
-            rebalance_insert(z);
-            z = z->parent;
+        for (node *a = z ; a ; a = a->parent) {
+            rebalance_insert(a);
         }
     }
   
@@ -451,10 +449,8 @@ public:
 
         delete z;
         p_size--;
-
-        while (y) {
-            rebalance_delete(y);
-            y = y->parent;
+        for (node *a = y ; a ; a = a->parent) {
+            rebalance_delete(a);
         }
     }
  
