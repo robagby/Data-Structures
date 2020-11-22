@@ -49,9 +49,9 @@ private:
     struct node {
         node *left, *right, *parent;
         T key;
-        int height;
-        node(const T& init = T(), int h = 0) : left(nullptr), right(nullptr), parent(nullptr), key(init), height(h) {}
-        ~node() {}
+        int balance;
+        node(const T& init = T()) : left(nullptr), right(nullptr), parent(nullptr), key(init), balance(0) { }
+        ~node() { }
     } *root;
 
     void rotate_left(node *x) {
@@ -77,12 +77,10 @@ private:
         if (y) {
             y->left = x;
         }
+        x->parent  = y;
 
-        x->parent = y;
-
-        // Make sure to update height of x (child of y) 1st (because height is a function of child height).
-        x->height = get_height(x);
-        y->height = get_height(y);
+        x->balance = 0;
+        y->balance = 0;
     }
 
     void rotate_right(node *x) {
@@ -109,12 +107,10 @@ private:
         if (y) {
             y->right = x;
         }
+        x->parent  = y;
 
-        x->parent = y;
-
-        // Make sure to update height of x (child of y) 1st (because height is a function of child height).
-        x->height = get_height(x);
-        y->height = get_height(y);
+        x->balance = 0;
+        y->balance = 0;
     }
 
     void rotate_left_right(node *x) {
@@ -143,15 +139,17 @@ private:
         if (y->left) {
             y->left->parent = z;
         }
-        y->left   = z;
+        y->left    = z;
 
-        y->parent = x->parent;
-        x->parent = y;
-        z->parent = y;
+        y->parent  = x->parent;
+        x->parent  = y;
+        z->parent  = y;
 
-        x->height = get_height(x);
-        z->height = get_height(z);
-        y->height = get_height(y);
+        z->balance = z->balance - 1 - std::max(y->balance, 0);
+        y->balance = y->balance - 1 + std::min(z->balance, 0);
+
+        x->balance = x->balance + 1 - std::min(z->balance, 0);
+        z->balance = z->balance + 1 + std::max(x->balance, 0);
     }
 
     void rotate_right_left(node *x) {
@@ -180,15 +178,17 @@ private:
         if (y->right) {
             y->right->parent = z;
         }
-        y->right  = z;
+        y->right   = z;
 
-        y->parent = x->parent;
-        x->parent = y;
-        z->parent = y;
+        y->parent  = x->parent;
+        x->parent  = y;
+        z->parent  = y;
 
-        x->height = get_height(x);
-        z->height = get_height(z);
-        y->height = get_height(y);
+        z->balance = z->balance + 1 - std::min(y->balance, 0);
+        y->balance = y->balance + 1 + std::max(z->balance, 0);
+
+        x->balance = x->balance - 1 - std::max(z->balance, 0);
+        z->balance = z->balance - 1 + std::min(x->balance, 0);
     }
 
     void replace(node *u, node *v) {
@@ -234,69 +234,9 @@ private:
         if (u->left) {
             traverse(u->left, i+1);
         }
-        std::cout << u->key << " level " << i << std::endl;
+        std::cout << u->key << " balance " << u->balance <<" level " << i << std::endl;
         if (u->right) {
             traverse(u->right, i+1);
-        }
-    }
-
-    int get_height(node *u) {
-        // Height is max length from leaf node to node u.
-        if (u->left && u->right) {
-            return 1 + std::max(u->left->height, u->right->height);
-        }
-        else if (!u->right && u->left) {
-            return 1 + u->left->height;
-        }
-        else if (!u->left && u->right) {
-            return 1 + u->right->height;
-        }
-        else {
-            return 0;
-        }
-    }
-
-    int get_balance(node *u) {
-        int l = 0;
-        int r = 0;
-
-        if (u->left) {
-            l = u->left->height;
-        }
-        if (u->right) {
-            r = u->right->height;
-        }
-        return r-l;
-    }
-
-    void rebalance(node *u) {
-        // Rebalancing with tree rotations.
-        int balance;
-        
-        u->height = get_height(u);
-        balance   = get_balance(u);
-
-        // Right heavy.
-        if (balance == 2) {
-            // Right subtree is right heavy.
-            if (u->right && get_balance(u->right) == 1) {
-                rotate_left(u);
-            }
-            // Right subtree is left heavy.
-            else if (u->right && u->right->left && get_balance(u->right) == -1) {
-                rotate_right_left(u);
-            }
-        }
-        // Left heavy.
-        else if (balance == -2) {
-            // Left subtree is left heavy.
-            if (u->left && get_balance(u->left) == -1) {
-                rotate_right(u);
-            }
-            // Left subtree is right heavy.
-            else if (u->left && u->left->right && get_balance(u->left) == 1) {
-                rotate_left_right(u);
-            }
         }
     }
 
@@ -331,9 +271,61 @@ public:
         else {
             p->left = z;
         }
+
         p_size++;
-        for (node *a = z->parent ; a ; a = a->parent) {
-            rebalance(a);
+        bool max_path;
+        if (p) {
+            max_path = (p->balance == 0);
+        }
+        else {
+            max_path = false;
+        }
+        
+        for (node *u = z ; u ; u = u->parent) {
+    
+            if (!u->parent) {
+                root = u;
+            }
+
+            // Right heavy.
+            if (u->balance == 2) {
+
+                // Right subtree is right heavy.
+                if (u->right && (u->right->balance == 1)) {
+                    rotate_left(u);
+                }
+                // Right subtree is left heavy.
+                else if (u->right && u->right->left && (u->right->balance == -1)) {                    
+                    rotate_right_left(u);
+                }
+            }
+            // Left heavy.
+            else if (u->balance == -2) {
+
+                // Left subtree is left heavy.
+                if (u->left && (u->left->balance == -1)) {                    
+                    rotate_right(u);
+                }
+                // Left subtree is right heavy.
+                else if (u->left && u->left->right && (u->left->balance == 1)) {
+                    rotate_left_right(u);
+                }
+            }
+            // Update the parent node's balance factor as long as it is part of the max length path.
+            if (u->parent && max_path) {
+
+                if (u->parent->left && (u == u->parent->left)) {
+                    max_path &= (u->parent->balance <= 0);
+                    u->parent->balance--;
+                }
+                else if (u->parent->right && (u == u->parent->right)) {
+                    max_path &= (u->parent->balance >= 0);
+                    u->parent->balance++;
+                }
+                else {
+                    max_path = false;
+                }
+            }
         }
     }
 
@@ -390,8 +382,36 @@ public:
         }
         delete z;
         p_size--;
-        for (node *a = p ; a ; a = a->parent) {
-            rebalance(a);
+
+        for (node *u = p ; u ; u = u->parent) {
+            if (!u->parent) {
+                root = u;
+            }
+
+            // Right heavy.
+            if (u->balance == 2) {
+
+                // Right subtree is right heavy.
+                if (u->right && (u->right->balance == 1)) {
+                    rotate_left(u);
+                }
+                // Right subtree is left heavy.
+                else if (u->right && u->right->left && (u->right->balance == -1)) {                    
+                    rotate_right_left(u);
+                }
+            }
+            // Left heavy.
+            else if (u->balance == -2) {
+
+                // Left subtree is left heavy.
+                if (u->left && (u->left->balance == -1)) {                    
+                    rotate_right(u);
+                }
+                // Left subtree is right heavy.
+                else if (u->left && u->left->right && (u->left->balance == 1)) {
+                    rotate_left_right(u);
+                }
+            }
         }
     }
 
